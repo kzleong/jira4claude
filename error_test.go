@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/fwojciec/jira4claude"
+	"github.com/kzleong/jira4claude"
 	"github.com/stretchr/testify/assert"
 )
 

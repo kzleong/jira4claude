@@ -3,7 +3,7 @@ package markdown_test
 import (
 	"testing"
 
-	"github.com/fwojciec/jira4claude/markdown"
+	"github.com/kzleong/jira4claude/markdown"
 	"github.com/stretchr/testify/assert"
 )
 

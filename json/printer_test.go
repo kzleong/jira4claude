@@ -6,8 +6,8 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/fwojciec/jira4claude"
-	jsonpkg "github.com/fwojciec/jira4claude/json"
+	"github.com/kzleong/jira4claude"
+	jsonpkg "github.com/kzleong/jira4claude/json"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

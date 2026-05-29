@@ -4,7 +4,7 @@ import (
 	"context"
 	"strings"
 
-	"github.com/fwojciec/jira4claude"
+	"github.com/kzleong/jira4claude"
 )
 
 // IssueCmd groups issue subcommands.

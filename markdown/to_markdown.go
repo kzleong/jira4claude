@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/fwojciec/jira4claude"
+	"github.com/kzleong/jira4claude"
 )
 
 // toMarkdown converts an Atlassian Document Format (ADF) document to GitHub-flavored markdown.

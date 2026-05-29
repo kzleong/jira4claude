@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	jira4claude "github.com/fwojciec/jira4claude"
+	jira4claude "github.com/kzleong/jira4claude"
 	"github.com/santhosh-tekuri/jsonschema/v6"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

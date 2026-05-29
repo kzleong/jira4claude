@@ -1,4 +1,4 @@
-module github.com/fwojciec/jira4claude
+module github.com/kzleong/jira4claude
 
 go 1.25.5
 

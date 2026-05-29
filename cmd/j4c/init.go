@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"github.com/fwojciec/jira4claude"
+	"github.com/kzleong/jira4claude"
 )
 
 // InitCmd initializes config.

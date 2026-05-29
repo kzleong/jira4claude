@@ -3,9 +3,9 @@ package main_test
 import (
 	"testing"
 
-	"github.com/fwojciec/jira4claude"
-	main "github.com/fwojciec/jira4claude/cmd/j4c"
-	"github.com/fwojciec/jira4claude/mock"
+	"github.com/kzleong/jira4claude"
+	main "github.com/kzleong/jira4claude/cmd/j4c"
+	"github.com/kzleong/jira4claude/mock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

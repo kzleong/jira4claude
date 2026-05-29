@@ -18,7 +18,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/fwojciec/jira4claude"
+	"github.com/kzleong/jira4claude"
 	"github.com/jdx/go-netrc"
 )
 

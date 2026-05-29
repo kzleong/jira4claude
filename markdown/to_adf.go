@@ -8,7 +8,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/fwojciec/jira4claude"
+	"github.com/kzleong/jira4claude"
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/ast"
 	"github.com/yuin/goldmark/extension"
