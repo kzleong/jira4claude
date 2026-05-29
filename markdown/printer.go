@@ -174,6 +174,35 @@ func (p *Printer) Sprints(items []jira4claude.SprintView) {
 	}
 }
 
+// Sprint prints details for a single sprint.
+func (p *Printer) Sprint(item jira4claude.SprintView) {
+	fmt.Fprintf(p.out, "# Sprint %d: %s\n\n", item.ID, item.Name)
+	if item.State != "" {
+		fmt.Fprintf(p.out, "**State:** %s\n", item.State)
+	}
+	if item.OriginBoardID != nil {
+		fmt.Fprintf(p.out, "**Origin Board ID:** %d\n", *item.OriginBoardID)
+	}
+	if item.IssueCount != nil {
+		fmt.Fprintf(p.out, "**Issue Count:** %d\n", *item.IssueCount)
+	}
+	if item.StartDate != nil {
+		fmt.Fprintf(p.out, "**Start Date:** %s\n", item.StartDate.Format("2006-01-02 15:04 MST"))
+	}
+	if item.EndDate != nil {
+		fmt.Fprintf(p.out, "**End Date:** %s\n", item.EndDate.Format("2006-01-02 15:04 MST"))
+	}
+	if item.ActivatedDate != nil {
+		fmt.Fprintf(p.out, "**Activated:** %s\n", item.ActivatedDate.Format("2006-01-02 15:04 MST"))
+	}
+	if item.CompleteDate != nil {
+		fmt.Fprintf(p.out, "**Completed:** %s\n", item.CompleteDate.Format("2006-01-02 15:04 MST"))
+	}
+	if item.Goal != "" {
+		fmt.Fprintf(p.out, "\n**Goal:**\n\n%s\n", item.Goal)
+	}
+}
+
 // Success prints a success message to stdout.
 func (p *Printer) Success(msg string, keys ...string) {
 	if len(keys) > 0 {

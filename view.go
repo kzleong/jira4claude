@@ -197,9 +197,16 @@ type BoardView struct {
 
 // SprintView is a display-ready representation of a Jira sprint.
 type SprintView struct {
-	ID    int    `json:"id"`
-	Name  string `json:"name"`
-	State string `json:"state,omitempty"`
+	ID            int        `json:"id"`
+	Name          string     `json:"name"`
+	State         string     `json:"state,omitempty"`
+	OriginBoardID *int       `json:"originBoardId,omitempty"`
+	Goal          string     `json:"goal,omitempty"`
+	StartDate     *time.Time `json:"startDate,omitempty"`
+	EndDate       *time.Time `json:"endDate,omitempty"`
+	ActivatedDate *time.Time `json:"activatedDate,omitempty"`
+	CompleteDate  *time.Time `json:"completeDate,omitempty"`
+	IssueCount    *int       `json:"issueCount,omitempty"`
 }
 
 // ToBoardViews converts domain boards to display-ready views.
@@ -215,9 +222,28 @@ func ToBoardViews(boards []*Board) []BoardView {
 func ToSprintViews(sprints []*Sprint) []SprintView {
 	items := make([]SprintView, len(sprints))
 	for i, s := range sprints {
-		items[i] = SprintView{ID: s.ID, Name: s.Name, State: s.State}
+		items[i] = ToSprintView(s)
 	}
 	return items
+}
+
+// ToSprintView converts a single domain sprint to a display-ready view.
+func ToSprintView(s *Sprint) SprintView {
+	if s == nil {
+		return SprintView{}
+	}
+	return SprintView{
+		ID:            s.ID,
+		Name:          s.Name,
+		State:         s.State,
+		OriginBoardID: s.OriginBoardID,
+		Goal:          s.Goal,
+		StartDate:     s.StartDate,
+		EndDate:       s.EndDate,
+		ActivatedDate: s.ActivatedDate,
+		CompleteDate:  s.CompleteDate,
+		IssueCount:    s.IssueCount,
+	}
 }
 
 // ToRelatedIssuesView converts all related issues (parent, subtasks, links) into a unified slice.

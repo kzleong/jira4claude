@@ -17,6 +17,7 @@ type LinkPrinter interface {
 type SprintPrinter interface {
 	Boards(items []BoardView)
 	Sprints(items []SprintView)
+	Sprint(item SprintView)
 }
 
 // MessagePrinter handles success/error/warning output.

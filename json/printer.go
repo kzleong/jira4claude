@@ -78,6 +78,11 @@ func (p *Printer) Sprints(items []jira4claude.SprintView) {
 	p.encode(items)
 }
 
+// Sprint prints a single sprint as a JSON object.
+func (p *Printer) Sprint(item jira4claude.SprintView) {
+	p.encode(item)
+}
+
 // Success prints a success message as JSON.
 func (p *Printer) Success(msg string, keys ...string) {
 	result := map[string]any{

@@ -17,6 +17,7 @@ type Printer struct {
 	LinksFn       func(key string, links []jira4claude.RelatedIssueView)
 	BoardsFn      func(items []jira4claude.BoardView)
 	SprintsFn     func(items []jira4claude.SprintView)
+	SprintFn      func(item jira4claude.SprintView)
 	SuccessFn     func(msg string, keys ...string)
 	WarningFn     func(msg string)
 	ErrorFn       func(err error)
@@ -35,6 +36,7 @@ type Printer struct {
 	}
 	BoardsCalls  [][]jira4claude.BoardView
 	SprintsCalls [][]jira4claude.SprintView
+	SprintCalls  []jira4claude.SprintView
 	SuccessCalls []struct {
 		Msg  string
 		Keys []string
@@ -95,6 +97,13 @@ func (p *Printer) Sprints(items []jira4claude.SprintView) {
 	p.SprintsCalls = append(p.SprintsCalls, items)
 	if p.SprintsFn != nil {
 		p.SprintsFn(items)
+	}
+}
+
+func (p *Printer) Sprint(item jira4claude.SprintView) {
+	p.SprintCalls = append(p.SprintCalls, item)
+	if p.SprintFn != nil {
+		p.SprintFn(item)
 	}
 }
 
