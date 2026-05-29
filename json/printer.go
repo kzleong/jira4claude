@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/fwojciec/jira4claude"
+	"github.com/kzleong/jira4claude"
 )
 
 // Printer outputs JSON format to stdout for machine parsing.

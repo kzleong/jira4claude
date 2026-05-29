@@ -5,11 +5,11 @@ import (
 	"os"
 
 	"github.com/alecthomas/kong"
-	"github.com/fwojciec/jira4claude"
-	"github.com/fwojciec/jira4claude/http"
-	"github.com/fwojciec/jira4claude/json"
-	"github.com/fwojciec/jira4claude/markdown"
-	"github.com/fwojciec/jira4claude/yaml"
+	"github.com/kzleong/jira4claude"
+	"github.com/kzleong/jira4claude/http"
+	"github.com/kzleong/jira4claude/json"
+	"github.com/kzleong/jira4claude/markdown"
+	"github.com/kzleong/jira4claude/yaml"
 )
 
 // Version information set by goreleaser ldflags.

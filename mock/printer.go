@@ -1,6 +1,6 @@
 package mock
 
-import "github.com/fwojciec/jira4claude"
+import "github.com/kzleong/jira4claude"
 
 // Compile-time interface verification.
 var _ jira4claude.Printer = (*Printer)(nil)

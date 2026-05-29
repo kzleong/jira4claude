@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 
-	"github.com/fwojciec/jira4claude"
+	"github.com/kzleong/jira4claude"
 )
 
 // BoardCmd groups board subcommands.

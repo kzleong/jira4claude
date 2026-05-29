@@ -2,7 +2,7 @@
 // and Atlassian Document Format (ADF) using the goldmark library.
 package markdown
 
-import "github.com/fwojciec/jira4claude"
+import "github.com/kzleong/jira4claude"
 
 // Compile-time interface verification.
 var _ jira4claude.Converter = (*Converter)(nil)

@@ -8,7 +8,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/fwojciec/jira4claude"
+	"github.com/kzleong/jira4claude"
 )
 
 // BoardService implements jira4claude.BoardService using the Jira Agile REST API.

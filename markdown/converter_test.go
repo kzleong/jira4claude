@@ -6,8 +6,8 @@ import (
 	"sort"
 	"testing"
 
-	jira4claude "github.com/fwojciec/jira4claude"
-	"github.com/fwojciec/jira4claude/markdown"
+	jira4claude "github.com/kzleong/jira4claude"
+	"github.com/kzleong/jira4claude/markdown"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

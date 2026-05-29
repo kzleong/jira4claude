@@ -6,8 +6,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/fwojciec/jira4claude"
-	jirahttp "github.com/fwojciec/jira4claude/http"
+	"github.com/kzleong/jira4claude"
+	jirahttp "github.com/kzleong/jira4claude/http"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

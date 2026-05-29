@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/fwojciec/jira4claude"
-	"github.com/fwojciec/jira4claude/mock"
+	"github.com/kzleong/jira4claude"
+	"github.com/kzleong/jira4claude/mock"
 	"github.com/stretchr/testify/assert"
 )
 

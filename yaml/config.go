@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/fwojciec/jira4claude"
+	"github.com/kzleong/jira4claude"
 	"gopkg.in/yaml.v3"
 )
 

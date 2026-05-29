@@ -6,7 +6,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/fwojciec/jira4claude"
+	"github.com/kzleong/jira4claude"
 )
 
 // maxSummaryLength is the maximum length for issue summaries in list format.

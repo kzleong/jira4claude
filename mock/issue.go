@@ -19,7 +19,7 @@ package mock
 import (
 	"context"
 
-	"github.com/fwojciec/jira4claude"
+	"github.com/kzleong/jira4claude"
 )
 
 // Compile-time interface verification.

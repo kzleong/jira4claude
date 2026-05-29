@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/fwojciec/jira4claude"
+	"github.com/kzleong/jira4claude"
 )
 
 // IssueService implements jira4claude.IssueService using the Jira REST API.
