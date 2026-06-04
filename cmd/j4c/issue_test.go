@@ -471,6 +471,65 @@ func TestIssueCreateCmd(t *testing.T) {
 	})
 }
 
+func TestIssueCreateCmd_Epic(t *testing.T) {
+	t.Parallel()
+
+	t.Run("sets epic key when epic flag provided", func(t *testing.T) {
+		t.Parallel()
+
+		var capturedIssue *jira4claude.Issue
+		svc := &mock.IssueService{
+			CreateFn: func(ctx context.Context, issue *jira4claude.Issue) (*jira4claude.Issue, error) {
+				capturedIssue = issue
+				return &jira4claude.Issue{Key: "DTA-500"}, nil
+			},
+		}
+
+		printer := &mock.Printer{}
+		ctx := &main.IssueContext{
+			Service:   svc,
+			Printer:   printer,
+			Converter: mockConverter(),
+			Config:    &jira4claude.Config{Project: "DTA", Server: "https://jira.it.keysight.com"},
+		}
+		cmd := main.IssueCreateCmd{
+			Summary: "New story",
+			Epic:    "DTA-31239",
+		}
+		err := cmd.Run(ctx)
+
+		require.NoError(t, err)
+		require.NotNil(t, capturedIssue)
+		assert.Equal(t, "DTA-31239", capturedIssue.EpicKey)
+	})
+
+	t.Run("no epic when flag omitted", func(t *testing.T) {
+		t.Parallel()
+
+		var capturedIssue *jira4claude.Issue
+		svc := &mock.IssueService{
+			CreateFn: func(ctx context.Context, issue *jira4claude.Issue) (*jira4claude.Issue, error) {
+				capturedIssue = issue
+				return &jira4claude.Issue{Key: "DTA-501"}, nil
+			},
+		}
+
+		printer := &mock.Printer{}
+		ctx := &main.IssueContext{
+			Service:   svc,
+			Printer:   printer,
+			Converter: mockConverter(),
+			Config:    &jira4claude.Config{Project: "DTA", Server: "https://jira.it.keysight.com"},
+		}
+		cmd := main.IssueCreateCmd{Summary: "No epic"}
+		err := cmd.Run(ctx)
+
+		require.NoError(t, err)
+		require.NotNil(t, capturedIssue)
+		assert.Empty(t, capturedIssue.EpicKey)
+	})
+}
+
 // IssueUpdateCmd tests
 
 func TestIssueUpdateCmd(t *testing.T) {
@@ -785,6 +844,148 @@ func TestIssueUpdateCmd(t *testing.T) {
 
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "auth failed")
+	})
+}
+
+func TestIssueUpdateCmd_Epic(t *testing.T) {
+	t.Parallel()
+
+	t.Run("sets epic when epic flag provided", func(t *testing.T) {
+		t.Parallel()
+
+		var capturedUpdate jira4claude.IssueUpdate
+		svc := &mock.IssueService{
+			UpdateFn: func(ctx context.Context, key string, update jira4claude.IssueUpdate) (*jira4claude.Issue, error) {
+				capturedUpdate = update
+				return makeIssue(key), nil
+			},
+		}
+
+		printer := &mock.Printer{}
+		ctx := &main.IssueContext{
+			Service:   svc,
+			Printer:   printer,
+			Converter: mockConverter(),
+			Config:    &jira4claude.Config{Project: "DTA", Server: "https://jira.it.keysight.com"},
+		}
+		epic := "DTA-31239"
+		cmd := main.IssueUpdateCmd{Key: "DTA-44296", Epic: &epic}
+		err := cmd.Run(ctx)
+
+		require.NoError(t, err)
+		require.NotNil(t, capturedUpdate.Epic)
+		assert.Equal(t, "DTA-31239", *capturedUpdate.Epic)
+	})
+
+	t.Run("clears epic when clear-epic flag set", func(t *testing.T) {
+		t.Parallel()
+
+		var capturedUpdate jira4claude.IssueUpdate
+		svc := &mock.IssueService{
+			UpdateFn: func(ctx context.Context, key string, update jira4claude.IssueUpdate) (*jira4claude.Issue, error) {
+				capturedUpdate = update
+				return makeIssue(key), nil
+			},
+		}
+
+		printer := &mock.Printer{}
+		ctx := &main.IssueContext{
+			Service:   svc,
+			Printer:   printer,
+			Converter: mockConverter(),
+			Config:    &jira4claude.Config{Project: "DTA", Server: "https://jira.it.keysight.com"},
+		}
+		cmd := main.IssueUpdateCmd{Key: "DTA-44296", ClearEpic: true}
+		err := cmd.Run(ctx)
+
+		require.NoError(t, err)
+		require.NotNil(t, capturedUpdate.Epic)
+		assert.Empty(t, *capturedUpdate.Epic)
+	})
+
+	t.Run("epic not changed when neither flag set", func(t *testing.T) {
+		t.Parallel()
+
+		var capturedUpdate jira4claude.IssueUpdate
+		svc := &mock.IssueService{
+			UpdateFn: func(ctx context.Context, key string, update jira4claude.IssueUpdate) (*jira4claude.Issue, error) {
+				capturedUpdate = update
+				return makeIssue(key), nil
+			},
+		}
+
+		printer := &mock.Printer{}
+		ctx := &main.IssueContext{
+			Service:   svc,
+			Printer:   printer,
+			Converter: mockConverter(),
+			Config:    &jira4claude.Config{Project: "DTA", Server: "https://jira.it.keysight.com"},
+		}
+		summary := "No epic change"
+		cmd := main.IssueUpdateCmd{Key: "DTA-44296", Summary: &summary}
+		err := cmd.Run(ctx)
+
+		require.NoError(t, err)
+		assert.Nil(t, capturedUpdate.Epic)
+	})
+}
+
+func TestIssueUpdateCmd_Type(t *testing.T) {
+	t.Parallel()
+
+	t.Run("sets type when type flag provided", func(t *testing.T) {
+		t.Parallel()
+
+		var capturedUpdate jira4claude.IssueUpdate
+		svc := &mock.IssueService{
+			UpdateFn: func(ctx context.Context, key string, update jira4claude.IssueUpdate) (*jira4claude.Issue, error) {
+				capturedUpdate = update
+				result := makeIssue(key)
+				result.Type = "Story"
+				return result, nil
+			},
+		}
+
+		printer := &mock.Printer{}
+		ctx := &main.IssueContext{
+			Service:   svc,
+			Printer:   printer,
+			Converter: mockConverter(),
+			Config:    &jira4claude.Config{Project: "DTA", Server: "https://jira.it.keysight.com"},
+		}
+		newType := "Story"
+		cmd := main.IssueUpdateCmd{Key: "DTA-44296", Type: &newType}
+		err := cmd.Run(ctx)
+
+		require.NoError(t, err)
+		require.NotNil(t, capturedUpdate.Type)
+		assert.Equal(t, "Story", *capturedUpdate.Type)
+	})
+
+	t.Run("type not changed when flag omitted", func(t *testing.T) {
+		t.Parallel()
+
+		var capturedUpdate jira4claude.IssueUpdate
+		svc := &mock.IssueService{
+			UpdateFn: func(ctx context.Context, key string, update jira4claude.IssueUpdate) (*jira4claude.Issue, error) {
+				capturedUpdate = update
+				return makeIssue(key), nil
+			},
+		}
+
+		printer := &mock.Printer{}
+		ctx := &main.IssueContext{
+			Service:   svc,
+			Printer:   printer,
+			Converter: mockConverter(),
+			Config:    &jira4claude.Config{Project: "DTA", Server: "https://jira.it.keysight.com"},
+		}
+		summary := "No type change"
+		cmd := main.IssueUpdateCmd{Key: "DTA-44296", Summary: &summary}
+		err := cmd.Run(ctx)
+
+		require.NoError(t, err)
+		assert.Nil(t, capturedUpdate.Type)
 	})
 }
 

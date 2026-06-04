@@ -18,8 +18,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kzleong/jira4claude"
 	"github.com/jdx/go-netrc"
+	"github.com/kzleong/jira4claude"
 )
 
 // Client is an HTTP client configured for Jira API requests.

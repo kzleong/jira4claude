@@ -2102,6 +2102,237 @@ func TestIssueService_Unlink(t *testing.T) {
 	})
 }
 
+func TestIssueService_EpicLink(t *testing.T) {
+	t.Parallel()
+
+	t.Run("creates issue with epic custom field", func(t *testing.T) {
+		t.Parallel()
+
+		var receivedRequest map[string]any
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			switch {
+			case r.Method == http.MethodGet && r.URL.Path == "/rest/api/3/field":
+				_, _ = w.Write([]byte(`[
+					{"id": "customfield_10002", "name": "Epic Link"},
+					{"id": "summary", "name": "Summary"}
+				]`))
+			case r.Method == http.MethodPost && r.URL.Path == "/rest/api/3/issue":
+				_ = json.NewDecoder(r.Body).Decode(&receivedRequest)
+				w.WriteHeader(http.StatusCreated)
+				_, _ = w.Write([]byte(`{"key": "DTA-500"}`))
+			default:
+				w.WriteHeader(http.StatusNotFound)
+			}
+		}))
+		defer server.Close()
+
+		client := newTestClient(t, server.URL, "user@example.com", "api-token")
+		svc := jirahttp.NewIssueService(client)
+
+		issue := &jira4claude.Issue{
+			Project: "DTA",
+			Summary: "New story",
+			Type:    "Story",
+			EpicKey: "DTA-31239",
+		}
+
+		result, err := svc.Create(context.Background(), issue)
+
+		require.NoError(t, err)
+		assert.Equal(t, "DTA-500", result.Key)
+
+		fields := receivedRequest["fields"].(map[string]any)
+		assert.Equal(t, "DTA-31239", fields["customfield_10002"])
+	})
+
+	t.Run("updates issue with epic custom field", func(t *testing.T) {
+		t.Parallel()
+
+		var receivedRequest map[string]any
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			switch {
+			case r.Method == http.MethodGet && r.URL.Path == "/rest/api/3/field":
+				_, _ = w.Write([]byte(`[{"id": "customfield_10002", "name": "Epic Link"}]`))
+			case r.Method == http.MethodPut && r.URL.Path == "/rest/api/3/issue/DTA-44296":
+				_ = json.NewDecoder(r.Body).Decode(&receivedRequest)
+				w.WriteHeader(http.StatusNoContent)
+			case r.Method == http.MethodGet && r.URL.Path == "/rest/api/3/issue/DTA-44296":
+				_, _ = w.Write([]byte(`{"key": "DTA-44296", "fields": {"project": {"key": "DTA"}, "summary": "Test", "status": {"name": "To Do"}, "issuetype": {"name": "Story"}}}`))
+			default:
+				w.WriteHeader(http.StatusNotFound)
+			}
+		}))
+		defer server.Close()
+
+		client := newTestClient(t, server.URL, "user@example.com", "api-token")
+		svc := jirahttp.NewIssueService(client)
+
+		epicKey := "DTA-31239"
+		_, err := svc.Update(context.Background(), "DTA-44296", jira4claude.IssueUpdate{
+			Epic: &epicKey,
+		})
+
+		require.NoError(t, err)
+
+		fields := receivedRequest["fields"].(map[string]any)
+		assert.Equal(t, "DTA-31239", fields["customfield_10002"])
+	})
+
+	t.Run("clears epic with empty string", func(t *testing.T) {
+		t.Parallel()
+
+		var receivedRequest map[string]any
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			switch {
+			case r.Method == http.MethodGet && r.URL.Path == "/rest/api/3/field":
+				_, _ = w.Write([]byte(`[{"id": "customfield_10002", "name": "Epic Link"}]`))
+			case r.Method == http.MethodPut && r.URL.Path == "/rest/api/3/issue/DTA-44296":
+				_ = json.NewDecoder(r.Body).Decode(&receivedRequest)
+				w.WriteHeader(http.StatusNoContent)
+			case r.Method == http.MethodGet && r.URL.Path == "/rest/api/3/issue/DTA-44296":
+				_, _ = w.Write([]byte(`{"key": "DTA-44296", "fields": {"project": {"key": "DTA"}, "summary": "Test", "status": {"name": "To Do"}, "issuetype": {"name": "Story"}}}`))
+			default:
+				w.WriteHeader(http.StatusNotFound)
+			}
+		}))
+		defer server.Close()
+
+		client := newTestClient(t, server.URL, "user@example.com", "api-token")
+		svc := jirahttp.NewIssueService(client)
+
+		clearEpic := ""
+		_, err := svc.Update(context.Background(), "DTA-44296", jira4claude.IssueUpdate{
+			Epic: &clearEpic,
+		})
+
+		require.NoError(t, err)
+
+		fields := receivedRequest["fields"].(map[string]any)
+		assert.Nil(t, fields["customfield_10002"])
+	})
+
+	t.Run("returns error when Epic Link field not found", func(t *testing.T) {
+		t.Parallel()
+
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			if r.Method == http.MethodGet && r.URL.Path == "/rest/api/3/field" {
+				_, _ = w.Write([]byte(`[{"id": "summary", "name": "Summary"}]`))
+				return
+			}
+			w.WriteHeader(http.StatusNotFound)
+		}))
+		defer server.Close()
+
+		client := newTestClient(t, server.URL, "user@example.com", "api-token")
+		svc := jirahttp.NewIssueService(client)
+
+		epicKey := "DTA-31239"
+		_, err := svc.Update(context.Background(), "DTA-44296", jira4claude.IssueUpdate{
+			Epic: &epicKey,
+		})
+
+		require.Error(t, err)
+		assert.Equal(t, jira4claude.ENotFound, jira4claude.ErrorCode(err))
+		assert.Contains(t, err.Error(), "Epic Link")
+	})
+
+	t.Run("create without epic does not call field endpoint", func(t *testing.T) {
+		t.Parallel()
+
+		fieldCalled := false
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			if r.Method == http.MethodGet && r.URL.Path == "/rest/api/3/field" {
+				fieldCalled = true
+			}
+			if r.Method == http.MethodPost {
+				w.WriteHeader(http.StatusCreated)
+				_, _ = w.Write([]byte(`{"key": "DTA-501"}`))
+				return
+			}
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`[]`))
+		}))
+		defer server.Close()
+
+		client := newTestClient(t, server.URL, "user@example.com", "api-token")
+		svc := jirahttp.NewIssueService(client)
+
+		_, err := svc.Create(context.Background(), &jira4claude.Issue{
+			Project: "DTA",
+			Summary: "No epic",
+			Type:    "Task",
+		})
+
+		require.NoError(t, err)
+		assert.False(t, fieldCalled, "field endpoint should not be called when no epic is set")
+	})
+}
+
+func TestIssueService_UpdateIssueType(t *testing.T) {
+	t.Parallel()
+
+	t.Run("updates issue type", func(t *testing.T) {
+		t.Parallel()
+
+		var receivedRequest map[string]any
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			if r.Method == http.MethodPut {
+				_ = json.NewDecoder(r.Body).Decode(&receivedRequest)
+				w.WriteHeader(http.StatusNoContent)
+				return
+			}
+			if r.Method == http.MethodGet {
+				_, _ = w.Write([]byte(`{"key": "DTA-44296", "fields": {"project": {"key": "DTA"}, "summary": "Test", "status": {"name": "To Do"}, "issuetype": {"name": "Story"}}}`))
+				return
+			}
+			w.WriteHeader(http.StatusNotFound)
+		}))
+		defer server.Close()
+
+		client := newTestClient(t, server.URL, "user@example.com", "api-token")
+		svc := jirahttp.NewIssueService(client)
+
+		newType := "Story"
+		result, err := svc.Update(context.Background(), "DTA-44296", jira4claude.IssueUpdate{
+			Type: &newType,
+		})
+
+		require.NoError(t, err)
+		assert.Equal(t, "Story", result.Type)
+
+		fields := receivedRequest["fields"].(map[string]any)
+		issueType := fields["issuetype"].(map[string]any)
+		assert.Equal(t, "Story", issueType["name"])
+	})
+
+	t.Run("Jira validation error propagated as-is", func(t *testing.T) {
+		t.Parallel()
+
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusBadRequest)
+			_, _ = w.Write([]byte(`{"errorMessages": [], "errors": {"issuetype": "Issue type is not valid for this project"}}`))
+		}))
+		defer server.Close()
+
+		client := newTestClient(t, server.URL, "user@example.com", "api-token")
+		svc := jirahttp.NewIssueService(client)
+
+		badType := "InvalidType"
+		_, err := svc.Update(context.Background(), "DTA-44296", jira4claude.IssueUpdate{
+			Type: &badType,
+		})
+
+		require.Error(t, err)
+		assert.Equal(t, jira4claude.EValidation, jira4claude.ErrorCode(err))
+	})
+}
+
 func TestIssueService_Assign(t *testing.T) {
 	t.Parallel()
 

@@ -57,7 +57,7 @@ type LinkedIssue struct {
 type Comment struct {
 	ID      string
 	Author  *User
-	Body    string // Jira Server stores comments as plain/wiki text
+	Body    *ADFNode // ADF document; nil if no body
 	Created time.Time
 }
 
@@ -66,7 +66,7 @@ type Issue struct {
 	Key         string
 	Project     string
 	Summary     string
-	Description string // Jira Server stores descriptions as plain/wiki text
+	Description *ADFNode // ADF document; nil if no description
 	Status      string
 	Type        string
 	Priority    string
@@ -80,6 +80,7 @@ type Issue struct {
 	Components  []string       // Component names assigned to the issue
 	StoryPoints *float64       // Story points (customfield_10006); nil if not set
 	Sprint      *Sprint        // Active or next sprint; nil if not in a sprint
+	EpicKey     string         // Epic Link key (e.g. "DTA-123"); empty if not set or not read
 	Created     time.Time
 	Updated     time.Time
 }
@@ -107,16 +108,21 @@ type IssueFilter struct {
 // For Components: nil means no change, empty slice means clear, non-empty means replace.
 // For StoryPoints: nil means no change, non-nil means set (use 0.0 to clear/zero).
 // For Sprint: nil means no change, 0 means clear sprint, positive integer means set sprint by ID.
+// For Description: nil means no change, non-nil means set to that ADF document.
+// For Epic: nil means no change, "" means clear epic link, "KEY" means set epic link.
+// For Type: nil means no change, non-nil means set issue type name.
 type IssueUpdate struct {
 	Summary     *string
-	Description *string // nil = no change, non-nil = set (plain/wiki text)
+	Description **ADFNode // nil = no change, non-nil = set ADF document
 	Priority    *string
 	Assignee    *string
 	Labels      *[]string
-	Parent      *string  // nil = no change, "" = clear parent, "KEY" = set parent
+	Parent      *string   // nil = no change, "" = clear parent, "KEY" = set parent
 	Components  *[]string // nil = no change, empty = clear, non-empty = replace
-	StoryPoints *float64 // nil = no change, non-nil = set
-	Sprint      *int     // nil = no change, 0 = clear sprint, positive = set by sprint ID
+	StoryPoints *float64  // nil = no change, non-nil = set
+	Sprint      *int      // nil = no change, 0 = clear sprint, positive = set by sprint ID
+	Epic        *string   // nil = no change, "" = clear epic link, "KEY" = set epic link
+	Type        *string   // nil = no change, non-nil = set issue type name
 }
 
 // IssueService defines operations for managing Jira issues.
@@ -137,8 +143,8 @@ type IssueService interface {
 	// Delete deletes an issue by its key.
 	Delete(ctx context.Context, key string) error
 
-	// AddComment adds a comment to an issue. Body is plain/wiki text.
-	AddComment(ctx context.Context, key string, body string) (*Comment, error)
+	// AddComment adds a comment to an issue. Body is an ADF document.
+	AddComment(ctx context.Context, key string, body *ADFNode) (*Comment, error)
 
 	// DeleteComment deletes a comment from an issue.
 	DeleteComment(ctx context.Context, key, commentID string) error

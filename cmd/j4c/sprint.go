@@ -199,4 +199,3 @@ func parseSprintDate(s string) (time.Time, error) {
 	}
 	return time.Time{}, fmt.Errorf("unrecognized date %q (use RFC3339 like 2026-06-01T09:00:00Z)", s)
 }
-

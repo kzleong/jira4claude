@@ -120,10 +120,11 @@ type IssueCreateCmd struct {
 	Project     string   `help:"Project key" short:"p"`
 	Type        string   `help:"Issue type" short:"t" default:"Task"`
 	Summary     string   `help:"Issue summary" short:"s" required:""`
-	Description string   `help:"Issue description" short:"d"`
+	Description string   `help:"Issue description (GFM)" short:"d"`
 	Priority    string   `help:"Issue priority"`
 	Labels      []string `help:"Issue labels" short:"l"`
 	Parent      string   `help:"Parent issue key (creates a Subtask)" short:"P"`
+	Epic        string   `help:"Epic key to link this issue to (e.g., DTA-123)"`
 	Assignee    string   `help:"Assignee: 'me', email, or account ID" short:"A"`
 	Components  []string `help:"Component names" short:"c"`
 	StoryPoints float64  `help:"Story points" name:"story-points" default:"0"`
@@ -148,14 +149,22 @@ func (c *IssueCreateCmd) Run(ctx *IssueContext) error {
 	}
 
 	issue := &jira4claude.Issue{
-		Project:     project,
-		Type:        issueType,
-		Summary:     c.Summary,
-		Description: c.Description,
-		Priority:    c.Priority,
-		Labels:      c.Labels,
-		Parent:      parent,
-		Components:  c.Components,
+		Project:    project,
+		Type:       issueType,
+		Summary:    c.Summary,
+		Priority:   c.Priority,
+		Labels:     c.Labels,
+		Parent:     parent,
+		Components: c.Components,
+		EpicKey:    c.Epic,
+	}
+
+	if c.Description != "" {
+		adf, warnings := ctx.Converter.ToADF(c.Description)
+		for _, w := range warnings {
+			ctx.Printer.Warning(w)
+		}
+		issue.Description = adf
 	}
 
 	if c.StoryPoints != 0 {
@@ -192,25 +201,27 @@ func (c *IssueCreateCmd) Run(ctx *IssueContext) error {
 
 // IssueUpdateCmd updates an issue.
 type IssueUpdateCmd struct {
-	Key         string   `arg:"" help:"Issue key"`
-	Summary     *string  `help:"New summary" short:"s"`
-	Description *string  `help:"New description" short:"d"`
-	Priority    *string  `help:"New priority"`
-	Assignee    *string  `help:"Assignee: 'me', email, or account ID" short:"a"`
-	Labels      []string `help:"New labels" short:"l"`
-	ClearLabels bool     `help:"Clear all labels" name:"clear-labels"`
-	Parent      *string  `help:"Parent issue key" short:"P" xor:"parent"`
-	ClearParent bool     `help:"Remove from parent" name:"clear-parent" xor:"parent"`
-	Components  []string `help:"Component names (replaces existing)" short:"c"`
-	ClearComponents bool `help:"Remove all components" name:"clear-components"`
-	StoryPoints *float64 `help:"Story points" name:"story-points"`
-	Sprint      string   `help:"Sprint: name or numeric ID" xor:"sprint"`
-	ClearSprint bool     `help:"Remove from sprint" name:"clear-sprint" xor:"sprint"`
+	Key             string   `arg:"" help:"Issue key"`
+	Summary         *string  `help:"New summary" short:"s"`
+	Description     *string  `help:"New description (GFM)" short:"d"`
+	Priority        *string  `help:"New priority"`
+	Assignee        *string  `help:"Assignee: 'me', email, or account ID" short:"a"`
+	Labels          []string `help:"New labels" short:"l"`
+	ClearLabels     bool     `help:"Clear all labels" name:"clear-labels"`
+	Parent          *string  `help:"Parent issue key" short:"P" xor:"parent"`
+	ClearParent     bool     `help:"Remove from parent" name:"clear-parent" xor:"parent"`
+	Components      []string `help:"Component names (replaces existing)" short:"c"`
+	ClearComponents bool     `help:"Remove all components" name:"clear-components"`
+	StoryPoints     *float64 `help:"Story points" name:"story-points"`
+	Sprint          string   `help:"Sprint: name or numeric ID" xor:"sprint"`
+	ClearSprint     bool     `help:"Remove from sprint" name:"clear-sprint" xor:"sprint"`
+	Epic            *string  `help:"Epic key to link this issue to (e.g., DTA-123)" xor:"epic"`
+	ClearEpic       bool     `help:"Remove epic link" name:"clear-epic" xor:"epic"`
+	Type            *string  `help:"New issue type (e.g., Story, Bug, Task)"`
 }
 
 // Run executes the update command.
 func (c *IssueUpdateCmd) Run(ctx *IssueContext) error {
-	// Resolve assignee if provided
 	if c.Assignee != nil {
 		accountID, err := ResolveAssignee(context.Background(), *c.Assignee, ctx.UserService)
 		if err != nil {
@@ -220,10 +231,17 @@ func (c *IssueUpdateCmd) Run(ctx *IssueContext) error {
 	}
 
 	update := jira4claude.IssueUpdate{
-		Summary:     c.Summary,
-		Description: c.Description,
-		Priority:    c.Priority,
-		Assignee:    c.Assignee,
+		Summary:  c.Summary,
+		Priority: c.Priority,
+		Assignee: c.Assignee,
+	}
+
+	if c.Description != nil && *c.Description != "" {
+		adf, warnings := ctx.Converter.ToADF(*c.Description)
+		for _, w := range warnings {
+			ctx.Printer.Warning(w)
+		}
+		update.Description = &adf
 	}
 
 	if len(c.Labels) > 0 {
@@ -261,6 +279,17 @@ func (c *IssueUpdateCmd) Run(ctx *IssueContext) error {
 	} else if c.ClearSprint {
 		zero := 0
 		update.Sprint = &zero
+	}
+
+	if c.Epic != nil {
+		update.Epic = c.Epic
+	} else if c.ClearEpic {
+		empty := ""
+		update.Epic = &empty
+	}
+
+	if c.Type != nil {
+		update.Type = c.Type
 	}
 
 	updated, err := ctx.Service.Update(context.Background(), c.Key, update)
@@ -366,12 +395,17 @@ func (c *IssueAssignCmd) Run(ctx *IssueContext) error {
 // IssueCommentCmd adds a comment.
 type IssueCommentCmd struct {
 	Key  string `arg:"" help:"Issue key"`
-	Body string `help:"Comment body" short:"b" required:""`
+	Body string `help:"Comment body (GFM)" short:"b" required:""`
 }
 
 // Run executes the comment command.
 func (c *IssueCommentCmd) Run(ctx *IssueContext) error {
-	comment, err := ctx.Service.AddComment(context.Background(), c.Key, c.Body)
+	adf, warnings := ctx.Converter.ToADF(c.Body)
+	for _, w := range warnings {
+		ctx.Printer.Warning(w)
+	}
+
+	comment, err := ctx.Service.AddComment(context.Background(), c.Key, adf)
 	if err != nil {
 		return err
 	}

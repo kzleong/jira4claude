@@ -20,7 +20,7 @@ type IssueService struct {
 
 // issuePath builds an escaped URL path for issue API endpoints.
 func issuePath(key string, segments ...string) string {
-	path := "/rest/api/2/issue/" + url.PathEscape(key)
+	path := "/rest/api/3/issue/" + url.PathEscape(key)
 	for _, seg := range segments {
 		path += "/" + url.PathEscape(seg)
 	}
@@ -37,7 +37,6 @@ func NewIssueService(client *Client) *IssueService {
 
 // Create creates a new issue and returns it with Key populated.
 func (s *IssueService) Create(ctx context.Context, issue *jira4claude.Issue) (*jira4claude.Issue, error) {
-	// Build request body
 	reqBody := createRequest{
 		Fields: createFields{
 			Project:   projectRef{Key: issue.Project},
@@ -46,7 +45,7 @@ func (s *IssueService) Create(ctx context.Context, issue *jira4claude.Issue) (*j
 		},
 	}
 
-	if issue.Description != "" {
+	if issue.Description != nil {
 		reqBody.Fields.Description = issue.Description
 	}
 	if issue.Priority != "" {
@@ -71,8 +70,15 @@ func (s *IssueService) Create(ctx context.Context, issue *jira4claude.Issue) (*j
 	if issue.Sprint != nil {
 		reqBody.Fields.Sprint = &issue.Sprint.ID
 	}
+	if issue.EpicKey != "" {
+		fieldID, err := s.epicLinkFieldID(ctx)
+		if err != nil {
+			return nil, err
+		}
+		reqBody.Fields.CustomFields = map[string]any{fieldID: issue.EpicKey}
+	}
 
-	req, err := s.client.NewJSONRequest(ctx, http.MethodPost, "/rest/api/2/issue", reqBody)
+	req, err := s.client.NewJSONRequest(ctx, http.MethodPost, "/rest/api/3/issue", reqBody)
 	if err != nil {
 		return nil, err
 	}
@@ -122,15 +128,13 @@ func (s *IssueService) Get(ctx context.Context, key string) (*jira4claude.Issue,
 
 // List returns issues matching the filter criteria.
 func (s *IssueService) List(ctx context.Context, filter jira4claude.IssueFilter) ([]*jira4claude.Issue, error) {
-	// Build JQL query
 	jql := filter.JQL
 	if jql == "" {
 		jql = buildJQL(filter)
 	}
 
-	// Build request URL with query parameters
 	fields := "key,summary,status,issuetype,project,priority,assignee,reporter,labels,issuelinks,parent,created,updated,description,components,customfield_10006,customfield_10001"
-	reqURL := "/rest/api/2/search?jql=" + url.QueryEscape(jql) + "&fields=" + fields
+	reqURL := "/rest/api/3/search/jql?jql=" + url.QueryEscape(jql) + "&fields=" + fields
 	if filter.Limit > 0 {
 		reqURL += "&maxResults=" + strconv.Itoa(filter.Limit)
 	}
@@ -172,7 +176,6 @@ func (s *IssueService) List(ctx context.Context, filter jira4claude.IssueFilter)
 
 // buildJQL constructs a JQL query from IssueFilter fields.
 func buildJQL(filter jira4claude.IssueFilter) string {
-	// Pre-allocate for max possible clauses: project, status, excludeStatus, assignee, parent, + labels
 	clauses := make([]string, 0, 5+len(filter.Labels))
 
 	if filter.Project != "" {
@@ -204,7 +207,6 @@ func buildJQL(filter jira4claude.IssueFilter) string {
 
 // Update modifies an existing issue and returns the updated issue.
 func (s *IssueService) Update(ctx context.Context, key string, update jira4claude.IssueUpdate) (*jira4claude.Issue, error) {
-	// Build request body with only the fields that are set
 	reqBody := updateRequest{}
 
 	if update.Summary != nil {
@@ -218,9 +220,9 @@ func (s *IssueService) Update(ctx context.Context, key string, update jira4claud
 	}
 	if update.Assignee != nil {
 		if *update.Assignee == "" {
-			reqBody.Fields.Assignee = &assigneeField{Name: nil}
+			reqBody.Fields.Assignee = &assigneeField{AccountID: nil}
 		} else {
-			reqBody.Fields.Assignee = &assigneeField{Name: update.Assignee}
+			reqBody.Fields.Assignee = &assigneeField{AccountID: update.Assignee}
 		}
 	}
 	if update.Labels != nil {
@@ -250,6 +252,23 @@ func (s *IssueService) Update(ctx context.Context, key string, update jira4claud
 			reqBody.Fields.Sprint = &sprintField{ID: update.Sprint}
 		}
 	}
+	if update.Type != nil {
+		reqBody.Fields.IssueType = &issueTypeRef{Name: *update.Type}
+	}
+	if update.Epic != nil {
+		fieldID, err := s.epicLinkFieldID(ctx)
+		if err != nil {
+			return nil, err
+		}
+		if reqBody.Fields.CustomFields == nil {
+			reqBody.Fields.CustomFields = make(map[string]any)
+		}
+		if *update.Epic == "" {
+			reqBody.Fields.CustomFields[fieldID] = nil
+		} else {
+			reqBody.Fields.CustomFields[fieldID] = *update.Epic
+		}
+	}
 
 	req, err := s.client.NewJSONRequest(ctx, http.MethodPut, issuePath(key), reqBody)
 	if err != nil {
@@ -261,7 +280,6 @@ func (s *IssueService) Update(ctx context.Context, key string, update jira4claud
 		return nil, err
 	}
 
-	// Fetch and return the updated issue
 	return s.Get(ctx, key)
 }
 
@@ -281,7 +299,7 @@ func (s *IssueService) Delete(ctx context.Context, key string) error {
 }
 
 // AddComment adds a comment to an issue.
-func (s *IssueService) AddComment(ctx context.Context, key string, body string) (*jira4claude.Comment, error) {
+func (s *IssueService) AddComment(ctx context.Context, key string, body *jira4claude.ADFNode) (*jira4claude.Comment, error) {
 	reqBody := map[string]any{
 		"body": body,
 	}
@@ -359,14 +377,14 @@ func (s *IssueService) Transition(ctx context.Context, key, transitionID string)
 	return err
 }
 
-// Assign assigns an issue to a user by username.
-// If name is empty, the issue is unassigned.
-func (s *IssueService) Assign(ctx context.Context, key, name string) error {
+// Assign assigns an issue to a user by account ID.
+// If accountID is empty, the issue is unassigned.
+func (s *IssueService) Assign(ctx context.Context, key, accountID string) error {
 	var reqBody map[string]any
-	if name == "" {
-		reqBody = map[string]any{"name": nil}
+	if accountID == "" {
+		reqBody = map[string]any{"accountId": nil}
 	} else {
-		reqBody = map[string]any{"name": name}
+		reqBody = map[string]any{"accountId": accountID}
 	}
 
 	req, err := s.client.NewJSONRequest(ctx, http.MethodPut, issuePath(key, "assignee"), reqBody)
@@ -378,13 +396,57 @@ func (s *IssueService) Assign(ctx context.Context, key, name string) error {
 	return err
 }
 
+// epicLinkFieldID discovers the Jira custom field ID for "Epic Link" at runtime.
+// The field ID varies between Jira instances (e.g. "customfield_10002").
+func (s *IssueService) epicLinkFieldID(ctx context.Context) (string, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "/rest/api/3/field", nil)
+	if err != nil {
+		return "", &jira4claude.Error{
+			Code:    jira4claude.EInternal,
+			Message: "failed to create field list request",
+			Inner:   err,
+		}
+	}
+
+	body, err := s.client.DoRequest(req, http.StatusOK)
+	if err != nil {
+		return "", err
+	}
+
+	var fields []fieldResponse
+	if err := json.Unmarshal(body, &fields); err != nil {
+		return "", &jira4claude.Error{
+			Code:    jira4claude.EInternal,
+			Message: "failed to parse field list response",
+			Inner:   err,
+		}
+	}
+
+	for _, f := range fields {
+		if f.Name == "Epic Link" {
+			return f.ID, nil
+		}
+	}
+
+	return "", &jira4claude.Error{
+		Code:    jira4claude.ENotFound,
+		Message: "Epic Link custom field not found; this Jira instance may not support Epic Link",
+	}
+}
+
+// fieldResponse represents a field entry from the Jira field list API.
+type fieldResponse struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
 // issueResponse represents the JSON structure returned by Jira API for an issue.
 type issueResponse struct {
 	Key    string `json:"key"`
 	Fields struct {
 		Project     struct{ Key string }  `json:"project"`
 		Summary     string                `json:"summary"`
-		Description string                `json:"description"`
+		Description *jira4claude.ADFNode  `json:"description"`
 		Status      struct{ Name string } `json:"status"`
 		IssueType   struct{ Name string } `json:"issuetype"`
 		Priority    struct{ Name string } `json:"priority"`
@@ -409,7 +471,6 @@ type componentResponse struct {
 }
 
 // sprintAPIResponse represents a sprint entry in the Jira API response.
-// Jira Server returns sprint(s) as an array under the custom field.
 type sprintAPIResponse struct {
 	ID    int    `json:"id"`
 	Name  string `json:"name"`
@@ -423,13 +484,11 @@ type sprintAPIList []sprintAPIResponse
 
 // UnmarshalJSON implements json.Unmarshaler for sprintAPIList.
 func (s *sprintAPIList) UnmarshalJSON(data []byte) error {
-	// try array of objects first
 	var arr []sprintAPIResponse
 	if err := json.Unmarshal(data, &arr); err == nil {
 		*s = arr
 		return nil
 	}
-	// try array of legacy GreenHopper strings: ["Sprint@...[id=N,...]"]
 	var strs []string
 	if err := json.Unmarshal(data, &strs); err == nil {
 		for _, str := range strs {
@@ -439,7 +498,6 @@ func (s *sprintAPIList) UnmarshalJSON(data []byte) error {
 		}
 		return nil
 	}
-	// try single legacy string (some Jira versions return unwrapped)
 	var str string
 	if err := json.Unmarshal(data, &str); err != nil {
 		return nil // null or unknown format — ignore silently
@@ -492,10 +550,10 @@ type commentsResponse struct {
 
 // commentAPIResponse represents a single comment in the issue response.
 type commentAPIResponse struct {
-	ID      string        `json:"id"`
-	Author  *userResponse `json:"author"`
-	Body    string        `json:"body"`
-	Created string        `json:"created"`
+	ID      string               `json:"id"`
+	Author  *userResponse        `json:"author"`
+	Body    *jira4claude.ADFNode `json:"body"`
+	Created string               `json:"created"`
 }
 
 // issueLinkResponse represents a link in the Jira API response.
@@ -520,10 +578,10 @@ type linkedIssueResponse struct {
 	} `json:"fields"`
 }
 
-// userResponse mirrors the Jira Server user JSON.
-// Server identifies users by `name` (username) rather than the Cloud-only `accountId`.
+// userResponse mirrors the Jira Cloud / Data Center 9+ user JSON.
+// Users are identified by accountId.
 type userResponse struct {
-	Name         string `json:"name"`
+	AccountID    string `json:"accountId"`
 	DisplayName  string `json:"displayName"`
 	EmailAddress string `json:"emailAddress"`
 }
@@ -591,7 +649,6 @@ func parseIssueResponse(body []byte) (*jira4claude.Issue, error) {
 		StoryPoints: resp.Fields.StoryPoints,
 	}
 
-	// Components
 	if len(resp.Fields.Components) > 0 {
 		issue.Components = make([]string, len(resp.Fields.Components))
 		for i, c := range resp.Fields.Components {
@@ -599,7 +656,6 @@ func parseIssueResponse(body []byte) (*jira4claude.Issue, error) {
 		}
 	}
 
-	// Sprint — prefer active sprint, fall back to first entry
 	if len(resp.Fields.Sprint) > 0 {
 		chosen := resp.Fields.Sprint[0]
 		for _, s := range resp.Fields.Sprint {
@@ -616,11 +672,9 @@ func parseIssueResponse(body []byte) (*jira4claude.Issue, error) {
 	}
 
 	issue.Parent = mapLinkedIssue(resp.Fields.Parent)
-
 	issue.Assignee = mapUser(resp.Fields.Assignee)
 	issue.Reporter = mapUser(resp.Fields.Reporter)
 
-	// Parse timestamps
 	if resp.Fields.Created != "" {
 		if t, err := parseJiraTime(resp.Fields.Created); err == nil {
 			issue.Created = t
@@ -645,7 +699,7 @@ func mapUser(resp *userResponse) *jira4claude.User {
 		return nil
 	}
 	return &jira4claude.User{
-		AccountID:   resp.Name,
+		AccountID:   resp.AccountID,
 		DisplayName: resp.DisplayName,
 		Email:       resp.EmailAddress,
 	}
@@ -664,7 +718,7 @@ func mapLinkedIssue(resp *linkedIssueResponse) *jira4claude.LinkedIssue {
 	}
 }
 
-// mapIssueLinks converts a slice of issueLinkResponse to domain IssueLinks. Returns nil if input is empty.
+// mapIssueLinks converts a slice of issueLinkResponse to domain IssueLinks.
 func mapIssueLinks(links []issueLinkResponse) []*jira4claude.IssueLink {
 	if len(links) == 0 {
 		return nil
@@ -685,7 +739,7 @@ func mapIssueLinks(links []issueLinkResponse) []*jira4claude.IssueLink {
 	return result
 }
 
-// mapSubtasks converts a slice of linkedIssueResponse to domain LinkedIssues for subtasks. Returns nil if empty.
+// mapSubtasks converts a slice of linkedIssueResponse to domain LinkedIssues for subtasks.
 func mapSubtasks(subtasks []linkedIssueResponse) []*jira4claude.LinkedIssue {
 	if len(subtasks) == 0 {
 		return nil
@@ -697,7 +751,7 @@ func mapSubtasks(subtasks []linkedIssueResponse) []*jira4claude.LinkedIssue {
 	return result
 }
 
-// mapComments converts a commentsResponse to domain Comments. Returns nil if input is nil or empty.
+// mapComments converts a commentsResponse to domain Comments.
 func mapComments(resp *commentsResponse) []*jira4claude.Comment {
 	if resp == nil || len(resp.Comments) == 0 {
 		return nil
@@ -719,7 +773,7 @@ func mapComments(resp *commentsResponse) []*jira4claude.Comment {
 	return result
 }
 
-// mapTransitions converts a slice of transitionResponse to domain Transitions. Returns nil if input is empty.
+// mapTransitions converts a slice of transitionResponse to domain Transitions.
 func mapTransitions(transitions []transitionResponse) []*jira4claude.Transition {
 	if len(transitions) == 0 {
 		return nil
@@ -747,7 +801,7 @@ func (s *IssueService) Link(ctx context.Context, inwardKey, linkType, outwardKey
 		"outwardIssue": map[string]any{"key": outwardKey},
 	}
 
-	req, err := s.client.NewJSONRequest(ctx, http.MethodPost, "/rest/api/2/issueLink", reqBody)
+	req, err := s.client.NewJSONRequest(ctx, http.MethodPost, "/rest/api/3/issueLink", reqBody)
 	if err != nil {
 		return err
 	}
@@ -758,14 +812,12 @@ func (s *IssueService) Link(ctx context.Context, inwardKey, linkType, outwardKey
 
 // Unlink removes a link between two issues.
 func (s *IssueService) Unlink(ctx context.Context, key1, key2 string) error {
-	// Fetch the first issue to find the link
 	linkID, err := s.findLinkID(ctx, key1, key2)
 	if err != nil {
 		return err
 	}
 
-	// Delete the link
-	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, "/rest/api/2/issueLink/"+url.PathEscape(linkID), nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, "/rest/api/3/issueLink/"+url.PathEscape(linkID), nil)
 	if err != nil {
 		return &jira4claude.Error{
 			Code:    jira4claude.EInternal,
@@ -780,7 +832,6 @@ func (s *IssueService) Unlink(ctx context.Context, key1, key2 string) error {
 
 // findLinkID finds the link ID connecting two issues.
 func (s *IssueService) findLinkID(ctx context.Context, key1, key2 string) (string, error) {
-	// Fetch issue with links
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, issuePath(key1), nil)
 	if err != nil {
 		return "", &jira4claude.Error{
@@ -795,7 +846,6 @@ func (s *IssueService) findLinkID(ctx context.Context, key1, key2 string) (strin
 		return "", err
 	}
 
-	// Parse the issue to find the link
 	var issueResp findLinkIssueResponse
 	if err := json.Unmarshal(respBody, &issueResp); err != nil {
 		return "", &jira4claude.Error{
@@ -805,7 +855,6 @@ func (s *IssueService) findLinkID(ctx context.Context, key1, key2 string) (strin
 		}
 	}
 
-	// Find the link to the target issue
 	for _, link := range issueResp.Fields.IssueLinks {
 		if link.OutwardIssue != nil && link.OutwardIssue.Key == key2 {
 			return link.ID, nil
@@ -823,10 +872,10 @@ func (s *IssueService) findLinkID(ctx context.Context, key1, key2 string) (strin
 
 // commentResponse represents the JSON structure returned by Jira API for a comment.
 type commentResponse struct {
-	ID      string        `json:"id"`
-	Author  *userResponse `json:"author"`
-	Body    string        `json:"body"`
-	Created string        `json:"created"`
+	ID      string               `json:"id"`
+	Author  *userResponse        `json:"author"`
+	Body    *jira4claude.ADFNode `json:"body"`
+	Created string               `json:"created"`
 }
 
 // parseCommentResponse parses the JSON response from Jira into a domain Comment.
@@ -847,7 +896,7 @@ func parseCommentResponse(body []byte) (*jira4claude.Comment, error) {
 
 	if resp.Author != nil {
 		comment.Author = &jira4claude.User{
-			AccountID:   resp.Author.Name,
+			AccountID:   resp.Author.AccountID,
 			DisplayName: resp.Author.DisplayName,
 			Email:       resp.Author.EmailAddress,
 		}
