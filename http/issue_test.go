@@ -84,7 +84,7 @@ func TestIssueService_Create(t *testing.T) {
 
 		var receivedRequest map[string]any
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if r.Method != http.MethodPost || r.URL.Path != "/rest/api/3/issue" {
+			if r.Method != http.MethodPost || r.URL.Path != "/rest/api/2/issue" {
 				w.WriteHeader(http.StatusNotFound)
 				return
 			}
@@ -102,7 +102,7 @@ func TestIssueService_Create(t *testing.T) {
 			_, _ = w.Write([]byte(`{
 				"id": "10001",
 				"key": "TEST-1",
-				"self": "https://test.atlassian.net/rest/api/3/issue/10001"
+				"self": "https://test.atlassian.net/rest/api/2/issue/10001"
 			}`))
 		}))
 		defer server.Close()
@@ -287,14 +287,14 @@ func TestIssueService_Get(t *testing.T) {
 
 		require.NoError(t, err)
 		// The slash should be escaped as %2F
-		assert.Equal(t, "/rest/api/3/issue/TEST%2F1", receivedRawPath)
+		assert.Equal(t, "/rest/api/2/issue/TEST%2F1", receivedRawPath)
 	})
 
 	t.Run("retrieves issue by key", func(t *testing.T) {
 		t.Parallel()
 
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if r.Method != http.MethodGet || r.URL.Path != "/rest/api/3/issue/TEST-1" {
+			if r.Method != http.MethodGet || r.URL.Path != "/rest/api/2/issue/TEST-1" {
 				w.WriteHeader(http.StatusNotFound)
 				return
 			}
@@ -313,8 +313,8 @@ func TestIssueService_Get(t *testing.T) {
 					"status": {"name": "To Do"},
 					"issuetype": {"name": "Task"},
 					"priority": {"name": "Medium"},
-					"assignee": {"accountId": "123", "displayName": "John Doe", "emailAddress": "john@example.com"},
-					"reporter": {"accountId": "456", "displayName": "Jane Smith", "emailAddress": "jane@example.com"},
+					"assignee": {"name": "123", "displayName": "John Doe", "emailAddress": "john@example.com"},
+					"reporter": {"name": "456", "displayName": "Jane Smith", "emailAddress": "jane@example.com"},
 					"labels": ["bug", "urgent"],
 					"created": "2024-01-15T10:30:00.000+0000",
 					"updated": "2024-01-16T14:20:00.000+0000"
@@ -366,7 +366,7 @@ func TestIssueService_Get(t *testing.T) {
 		t.Parallel()
 
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if r.Method != http.MethodGet || r.URL.Path != "/rest/api/3/issue/TEST-2" {
+			if r.Method != http.MethodGet || r.URL.Path != "/rest/api/2/issue/TEST-2" {
 				w.WriteHeader(http.StatusNotFound)
 				return
 			}
@@ -411,7 +411,7 @@ func TestIssueService_Get(t *testing.T) {
 		t.Parallel()
 
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if r.Method != http.MethodGet || r.URL.Path != "/rest/api/3/issue/TEST-3" {
+			if r.Method != http.MethodGet || r.URL.Path != "/rest/api/2/issue/TEST-3" {
 				w.WriteHeader(http.StatusNotFound)
 				return
 			}
@@ -443,7 +443,7 @@ func TestIssueService_Get(t *testing.T) {
 		t.Parallel()
 
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if r.Method != http.MethodGet || r.URL.Path != "/rest/api/3/issue/TEST-1" {
+			if r.Method != http.MethodGet || r.URL.Path != "/rest/api/2/issue/TEST-1" {
 				w.WriteHeader(http.StatusNotFound)
 				return
 			}
@@ -521,7 +521,7 @@ func TestIssueService_Get(t *testing.T) {
 		t.Parallel()
 
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if r.Method != http.MethodGet || r.URL.Path != "/rest/api/3/issue/TEST-1" {
+			if r.Method != http.MethodGet || r.URL.Path != "/rest/api/2/issue/TEST-1" {
 				w.WriteHeader(http.StatusNotFound)
 				return
 			}
@@ -539,7 +539,7 @@ func TestIssueService_Get(t *testing.T) {
 							{
 								"id": "10001",
 								"author": {
-									"accountId": "user123",
+									"name": "user123",
 									"displayName": "John Doe",
 									"emailAddress": "john@example.com"
 								},
@@ -553,7 +553,7 @@ func TestIssueService_Get(t *testing.T) {
 							{
 								"id": "10002",
 								"author": {
-									"accountId": "user456",
+									"name": "user456",
 									"displayName": "Jane Smith",
 									"emailAddress": "jane@example.com"
 								},
@@ -670,7 +670,7 @@ func TestIssueService_Get(t *testing.T) {
 		t.Parallel()
 
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if r.Method != http.MethodGet || r.URL.Path != "/rest/api/3/issue/TEST-1" {
+			if r.Method != http.MethodGet || r.URL.Path != "/rest/api/2/issue/TEST-1" {
 				w.WriteHeader(http.StatusNotFound)
 				return
 			}
@@ -764,7 +764,7 @@ func TestIssueService_List(t *testing.T) {
 
 		var receivedJQL string
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if r.Method != http.MethodGet || r.URL.Path != "/rest/api/3/search/jql" {
+			if r.Method != http.MethodGet || r.URL.Path != "/rest/api/2/search" {
 				w.WriteHeader(http.StatusNotFound)
 				return
 			}
@@ -1186,13 +1186,13 @@ func TestIssueService_Update(t *testing.T) {
 
 		var receivedRequest map[string]any
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if r.Method == http.MethodPut && r.URL.Path == "/rest/api/3/issue/TEST-1" {
+			if r.Method == http.MethodPut && r.URL.Path == "/rest/api/2/issue/TEST-1" {
 				_ = json.NewDecoder(r.Body).Decode(&receivedRequest)
 				w.WriteHeader(http.StatusNoContent)
 				return
 			}
 
-			if r.Method == http.MethodGet && r.URL.Path == "/rest/api/3/issue/TEST-1" {
+			if r.Method == http.MethodGet && r.URL.Path == "/rest/api/2/issue/TEST-1" {
 				w.Header().Set("Content-Type", "application/json")
 				_, _ = w.Write([]byte(`{
 					"key": "TEST-1",
@@ -1447,7 +1447,7 @@ func TestIssueService_AddComment(t *testing.T) {
 			w.WriteHeader(http.StatusCreated)
 			_, _ = w.Write([]byte(`{
 				"id": "10001",
-				"author": {"accountId": "123", "displayName": "Test"},
+				"author": {"name": "123", "displayName": "Test"},
 				"body": {"type": "doc", "version": 1, "content": []},
 				"created": "2024-01-15T10:30:00.000+0000"
 			}`))
@@ -1501,7 +1501,7 @@ func TestIssueService_AddComment(t *testing.T) {
 
 		var receivedRequest map[string]any
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if r.Method != http.MethodPost || r.URL.Path != "/rest/api/3/issue/TEST-1/comment" {
+			if r.Method != http.MethodPost || r.URL.Path != "/rest/api/2/issue/TEST-1/comment" {
 				w.WriteHeader(http.StatusNotFound)
 				return
 			}
@@ -1513,7 +1513,7 @@ func TestIssueService_AddComment(t *testing.T) {
 			_, _ = w.Write([]byte(`{
 				"id": "10001",
 				"author": {
-					"accountId": "123",
+					"name": "123",
 					"displayName": "John Doe",
 					"emailAddress": "john@example.com"
 				},
@@ -1644,7 +1644,7 @@ func TestIssueService_Delete(t *testing.T) {
 
 		var deleteCalled bool
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if r.Method == http.MethodDelete && r.URL.Path == "/rest/api/3/issue/TEST-1" {
+			if r.Method == http.MethodDelete && r.URL.Path == "/rest/api/2/issue/TEST-1" {
 				deleteCalled = true
 				w.WriteHeader(http.StatusNoContent)
 				return
@@ -1689,7 +1689,7 @@ func TestIssueService_DeleteComment(t *testing.T) {
 
 		var deleteCalled bool
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if r.Method == http.MethodDelete && r.URL.Path == "/rest/api/3/issue/TEST-1/comment/10001" {
+			if r.Method == http.MethodDelete && r.URL.Path == "/rest/api/2/issue/TEST-1/comment/10001" {
 				deleteCalled = true
 				w.WriteHeader(http.StatusNoContent)
 				return
@@ -1733,7 +1733,7 @@ func TestIssueService_Transitions(t *testing.T) {
 		t.Parallel()
 
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if r.Method != http.MethodGet || r.URL.Path != "/rest/api/3/issue/TEST-1/transitions" {
+			if r.Method != http.MethodGet || r.URL.Path != "/rest/api/2/issue/TEST-1/transitions" {
 				w.WriteHeader(http.StatusNotFound)
 				return
 			}
@@ -1809,7 +1809,7 @@ func TestIssueService_Transition(t *testing.T) {
 
 		var receivedRequest map[string]any
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if r.Method != http.MethodPost || r.URL.Path != "/rest/api/3/issue/TEST-1/transitions" {
+			if r.Method != http.MethodPost || r.URL.Path != "/rest/api/2/issue/TEST-1/transitions" {
 				w.WriteHeader(http.StatusNotFound)
 				return
 			}
@@ -1876,7 +1876,7 @@ func TestIssueService_Link(t *testing.T) {
 
 		var receivedRequest map[string]any
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if r.Method != http.MethodPost || r.URL.Path != "/rest/api/3/issueLink" {
+			if r.Method != http.MethodPost || r.URL.Path != "/rest/api/2/issueLink" {
 				w.WriteHeader(http.StatusNotFound)
 				return
 			}
@@ -1950,7 +1950,7 @@ func TestIssueService_Unlink(t *testing.T) {
 		var deletedLinkID string
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			// First, the service fetches the issue to find the link
-			if r.Method == http.MethodGet && r.URL.Path == "/rest/api/3/issue/TEST-1" {
+			if r.Method == http.MethodGet && r.URL.Path == "/rest/api/2/issue/TEST-1" {
 				w.Header().Set("Content-Type", "application/json")
 				_, _ = w.Write([]byte(`{
 					"key": "TEST-1",
@@ -1979,7 +1979,7 @@ func TestIssueService_Unlink(t *testing.T) {
 			}
 
 			// Then, it deletes the link
-			const linkPath = "/rest/api/3/issueLink/"
+			const linkPath = "/rest/api/2/issueLink/"
 			if r.Method == http.MethodDelete && strings.HasPrefix(r.URL.Path, linkPath) {
 				deletedLinkID = strings.TrimPrefix(r.URL.Path, linkPath)
 				w.WriteHeader(http.StatusNoContent)
@@ -2004,7 +2004,7 @@ func TestIssueService_Unlink(t *testing.T) {
 
 		var deletedLinkID string
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if r.Method == http.MethodGet && r.URL.Path == "/rest/api/3/issue/TEST-2" {
+			if r.Method == http.MethodGet && r.URL.Path == "/rest/api/2/issue/TEST-2" {
 				w.Header().Set("Content-Type", "application/json")
 				_, _ = w.Write([]byte(`{
 					"key": "TEST-2",
@@ -2032,7 +2032,7 @@ func TestIssueService_Unlink(t *testing.T) {
 				return
 			}
 
-			const linkPath = "/rest/api/3/issueLink/"
+			const linkPath = "/rest/api/2/issueLink/"
 			if r.Method == http.MethodDelete && strings.HasPrefix(r.URL.Path, linkPath) {
 				deletedLinkID = strings.TrimPrefix(r.URL.Path, linkPath)
 				w.WriteHeader(http.StatusNoContent)
@@ -2056,7 +2056,7 @@ func TestIssueService_Unlink(t *testing.T) {
 		t.Parallel()
 
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if r.Method == http.MethodGet && r.URL.Path == "/rest/api/3/issue/TEST-1" {
+			if r.Method == http.MethodGet && r.URL.Path == "/rest/api/2/issue/TEST-1" {
 				w.Header().Set("Content-Type", "application/json")
 				_, _ = w.Write([]byte(`{
 					"key": "TEST-1",
@@ -2112,12 +2112,12 @@ func TestIssueService_EpicLink(t *testing.T) {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			switch {
-			case r.Method == http.MethodGet && r.URL.Path == "/rest/api/3/field":
+			case r.Method == http.MethodGet && r.URL.Path == "/rest/api/2/field":
 				_, _ = w.Write([]byte(`[
 					{"id": "customfield_10002", "name": "Epic Link"},
 					{"id": "summary", "name": "Summary"}
 				]`))
-			case r.Method == http.MethodPost && r.URL.Path == "/rest/api/3/issue":
+			case r.Method == http.MethodPost && r.URL.Path == "/rest/api/2/issue":
 				_ = json.NewDecoder(r.Body).Decode(&receivedRequest)
 				w.WriteHeader(http.StatusCreated)
 				_, _ = w.Write([]byte(`{"key": "DTA-500"}`))
@@ -2153,12 +2153,12 @@ func TestIssueService_EpicLink(t *testing.T) {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			switch {
-			case r.Method == http.MethodGet && r.URL.Path == "/rest/api/3/field":
+			case r.Method == http.MethodGet && r.URL.Path == "/rest/api/2/field":
 				_, _ = w.Write([]byte(`[{"id": "customfield_10002", "name": "Epic Link"}]`))
-			case r.Method == http.MethodPut && r.URL.Path == "/rest/api/3/issue/DTA-44296":
+			case r.Method == http.MethodPut && r.URL.Path == "/rest/api/2/issue/DTA-44296":
 				_ = json.NewDecoder(r.Body).Decode(&receivedRequest)
 				w.WriteHeader(http.StatusNoContent)
-			case r.Method == http.MethodGet && r.URL.Path == "/rest/api/3/issue/DTA-44296":
+			case r.Method == http.MethodGet && r.URL.Path == "/rest/api/2/issue/DTA-44296":
 				_, _ = w.Write([]byte(`{"key": "DTA-44296", "fields": {"project": {"key": "DTA"}, "summary": "Test", "status": {"name": "To Do"}, "issuetype": {"name": "Story"}}}`))
 			default:
 				w.WriteHeader(http.StatusNotFound)
@@ -2187,12 +2187,12 @@ func TestIssueService_EpicLink(t *testing.T) {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			switch {
-			case r.Method == http.MethodGet && r.URL.Path == "/rest/api/3/field":
+			case r.Method == http.MethodGet && r.URL.Path == "/rest/api/2/field":
 				_, _ = w.Write([]byte(`[{"id": "customfield_10002", "name": "Epic Link"}]`))
-			case r.Method == http.MethodPut && r.URL.Path == "/rest/api/3/issue/DTA-44296":
+			case r.Method == http.MethodPut && r.URL.Path == "/rest/api/2/issue/DTA-44296":
 				_ = json.NewDecoder(r.Body).Decode(&receivedRequest)
 				w.WriteHeader(http.StatusNoContent)
-			case r.Method == http.MethodGet && r.URL.Path == "/rest/api/3/issue/DTA-44296":
+			case r.Method == http.MethodGet && r.URL.Path == "/rest/api/2/issue/DTA-44296":
 				_, _ = w.Write([]byte(`{"key": "DTA-44296", "fields": {"project": {"key": "DTA"}, "summary": "Test", "status": {"name": "To Do"}, "issuetype": {"name": "Story"}}}`))
 			default:
 				w.WriteHeader(http.StatusNotFound)
@@ -2219,7 +2219,7 @@ func TestIssueService_EpicLink(t *testing.T) {
 
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
-			if r.Method == http.MethodGet && r.URL.Path == "/rest/api/3/field" {
+			if r.Method == http.MethodGet && r.URL.Path == "/rest/api/2/field" {
 				_, _ = w.Write([]byte(`[{"id": "summary", "name": "Summary"}]`))
 				return
 			}
@@ -2246,7 +2246,7 @@ func TestIssueService_EpicLink(t *testing.T) {
 		fieldCalled := false
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
-			if r.Method == http.MethodGet && r.URL.Path == "/rest/api/3/field" {
+			if r.Method == http.MethodGet && r.URL.Path == "/rest/api/2/field" {
 				fieldCalled = true
 			}
 			if r.Method == http.MethodPost {
@@ -2341,7 +2341,7 @@ func TestIssueService_Assign(t *testing.T) {
 
 		var receivedRequest map[string]any
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if r.Method != http.MethodPut || r.URL.Path != "/rest/api/3/issue/TEST-1/assignee" {
+			if r.Method != http.MethodPut || r.URL.Path != "/rest/api/2/issue/TEST-1/assignee" {
 				w.WriteHeader(http.StatusNotFound)
 				return
 			}
@@ -2357,7 +2357,7 @@ func TestIssueService_Assign(t *testing.T) {
 		err := svc.Assign(context.Background(), "TEST-1", "abc123")
 
 		require.NoError(t, err)
-		assert.Equal(t, "abc123", receivedRequest["accountId"])
+		assert.Equal(t, "abc123", receivedRequest["name"])
 	})
 
 	t.Run("unassigns issue when accountID is empty", func(t *testing.T) {
@@ -2365,7 +2365,7 @@ func TestIssueService_Assign(t *testing.T) {
 
 		var receivedRequest map[string]any
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if r.Method != http.MethodPut || r.URL.Path != "/rest/api/3/issue/TEST-1/assignee" {
+			if r.Method != http.MethodPut || r.URL.Path != "/rest/api/2/issue/TEST-1/assignee" {
 				w.WriteHeader(http.StatusNotFound)
 				return
 			}
@@ -2381,7 +2381,7 @@ func TestIssueService_Assign(t *testing.T) {
 		err := svc.Assign(context.Background(), "TEST-1", "")
 
 		require.NoError(t, err)
-		assert.Nil(t, receivedRequest["accountId"])
+		assert.Nil(t, receivedRequest["name"])
 	})
 
 	t.Run("returns error when issue not found", func(t *testing.T) {

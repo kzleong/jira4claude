@@ -20,6 +20,7 @@ type IssueView struct {
 	Components    []string           `json:"components,omitempty"`
 	StoryPoints   *float64           `json:"storyPoints,omitempty"`
 	Sprint        string             `json:"sprint,omitempty"`
+	EpicKey       string             `json:"epicKey,omitempty"`
 	RelatedIssues []RelatedIssueView `json:"relatedIssues"`
 	Comments      []CommentView      `json:"comments,omitempty"`
 	Created       string             `json:"created"`
@@ -101,6 +102,7 @@ func ToIssueView(issue *Issue, conv Converter, warn func(string), serverURL stri
 		Components:    issue.Components,
 		StoryPoints:   issue.StoryPoints,
 		Sprint:        sprintName(issue.Sprint),
+		EpicKey:       issue.EpicKey,
 		RelatedIssues: relatedIssues,
 		Comments:      comments,
 		Created:       issue.Created.Format(time.RFC3339),

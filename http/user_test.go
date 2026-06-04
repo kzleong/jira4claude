@@ -19,12 +19,12 @@ func TestUserService_GetMyself(t *testing.T) {
 		t.Parallel()
 
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			assert.Equal(t, "/rest/api/3/myself", r.URL.Path)
+			assert.Equal(t, "/rest/api/2/myself", r.URL.Path)
 			assert.Equal(t, http.MethodGet, r.Method)
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
 			_, _ = w.Write([]byte(`{
-				"accountId": "abc123",
+				"name": "abc123",
 				"displayName": "Test User",
 				"emailAddress": "test@example.com"
 			}`))
@@ -68,19 +68,19 @@ func TestUserService_FindUsers(t *testing.T) {
 		t.Parallel()
 
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			assert.Equal(t, "/rest/api/3/user/search", r.URL.Path)
-			assert.Equal(t, "test@example.com", r.URL.Query().Get("query"))
+			assert.Equal(t, "/rest/api/2/user/search", r.URL.Path)
+			assert.Equal(t, "test@example.com", r.URL.Query().Get("username"))
 			assert.Equal(t, http.MethodGet, r.Method)
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
 			_, _ = w.Write([]byte(`[
 				{
-					"accountId": "user1",
+					"name": "user1",
 					"displayName": "User One",
 					"emailAddress": "user1@example.com"
 				},
 				{
-					"accountId": "user2",
+					"name": "user2",
 					"displayName": "User Two",
 					"emailAddress": "user2@example.com"
 				}
